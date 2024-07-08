@@ -1,15 +1,16 @@
 import os
-#import cv2
+import cv2
 import time
 import qrcode
 from PIL import Image
 import base64
+import numpy as np
 
-def show_qrs(qrs, time_to_show=1):
+def show_qrs(qrs, time_to_show=3):
     for i in qrs:
-        i.show()
-        """if cv2.waitKey(1) & 0xFF == ord('q'):
-            break"""
+        i.get_image().resize((1000,1000)).show()
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
         time.sleep(time_to_show)
     
 def generate_qr_code_from_file(bytes):
@@ -38,9 +39,9 @@ def generate_qr_code_from_file(bytes):
     img = qr.make_image(fill='black', back_color='white')
     return img
 
-def split_file_into_packets(filename):
+def split_file_into_packets(filename, file_path):
     # Open the file in bytes mode
-    with open(filename, 'rb') as file:
+    with open(file_path, 'rb') as file:
         file_content = file.read()
     
     # Get the total size of the file
@@ -115,11 +116,15 @@ def reconstruct_file(packets, output_filename):
 # Example usage
 
 # Example usage
-filename = '/Users/shalevaziz/Documents/sprint3/frame.txt'  # Replace with your filename
-packets = split_file_into_packets(filename)
+all_packets = []
+for filename in os.listdir('top_secret'):
+    packets = split_file_into_packets(filename, os.path.join('top_secret', filename))
+    all_packets += packets
+# add a header to the packets
+header = "".encode('utf-8').ljust(50, b'\0')  # Pad header to a fixed length
+packets.append(header)
 qrs = [generate_qr_code_from_file(packet) for packet in packets]
-show_qrs(qrs, 1)
+show_qrs(qrs)
 print(len(packets))
 """save_packets(packets, 'output_packets')
 packets = read_packets('output_packets')"""
-reconstruct_file(packets, 'reconstructed_file.txt')  # Output filename for reconstructed file
