@@ -29,12 +29,19 @@ def process_audio(data):
     positive_freqs = freqs[:len(freqs) // 2]
     magnitudes = np.abs(fft_result[:len(fft_result) // 2])
     
-    # Find the frequency with the highest magnitude
-    peak_freq = positive_freqs[np.argmax(magnitudes)]
-    closest_freq = find_closest_multiple_10(peak_freq)
+    # Filter frequencies within the specified range
+    in_range_indices = np.where((positive_freqs >= MIN_FREQ) & (positive_freqs <= MAX_FREQ))
+    positive_freqs_in_range = positive_freqs[in_range_indices]
+    magnitudes_in_range = magnitudes[in_range_indices]
+    
+    # Find the frequency with the highest magnitude in the specified range
+    if len(magnitudes_in_range) > 0:
+        peak_freq = positive_freqs_in_range[np.argmax(magnitudes_in_range)]
+        closest_freq = find_closest_multiple_10(peak_freq)
+    else:
+        closest_freq = None  # No significant frequency found in the range
     
     return peak_freq, closest_freq
-
     
 
 def receive():
