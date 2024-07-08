@@ -6,6 +6,7 @@ def broadcast(data):
     for d in data:
         #play the frequency for the duration
         frequency=RANGE_L+d*BIN_SIZE
+        print(f"Broadcasting frequency: {frequency} Hz")
         winsound.Beep(frequency, DURATION*1000)
     
 
