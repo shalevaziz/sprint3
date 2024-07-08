@@ -1,58 +1,125 @@
 import os
+#import cv2
+import time
+import qrcode
+from PIL import Image
+import base64
 
-TOP_SECRET_FOLDER_PATH = r'C:\Users\Public\Documents\top_secret'
-TOP_SECRET_FOLDER_PATH = 'top_secret'
-top_secret_files = os.listdir(TOP_SECRET_FOLDER_PATH)
-
-def split_to_channels(data, num_channels = 2):
-    # Split the data into num_channels channels
-    splitted_data = []
-    for i in range(0,len(data),num_channels):
-        splitted_data.append(data[i:i+num_channels])
+def show_qrs(qrs, time_to_show=1):
+    for i in qrs:
+        i.show()
+        """if cv2.waitKey(1) & 0xFF == ord('q'):
+            break"""
+        time.sleep(time_to_show)
     
-    last = data[len(data)//num_channels*num_channels:]
-    if len(last) != 0:
-        last += [None] * (num_channels - len(last))
+def generate_qr_code_from_file(bytes):
+    # Read the file contents
+    """with open(file_path, 'rb') as file:
+        file_content = file.read()"""
+    # name = get_file_name(file_path)
+    
+    # Convert binary content to a base64 encoded string
+    base64_content = base64.b64encode(bytes).decode('utf-8')
+    
+    
+    # Create QR code instance
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    
+    # Add data to the instance
+    qr.add_data(base64_content)
+    qr.make(fit=True)
+
+    # Create an image from the QR Code instance
+    img = qr.make_image(fill='black', back_color='white')
+    return img
+
+def split_file_into_packets(filename):
+    # Open the file in bytes mode
+    with open(filename, 'rb') as file:
+        file_content = file.read()
+    
+    # Get the total size of the file
+    file_size = len(file_content)
+    
+    # Calculate the number of packets needed
+    packet_size = 256  # Change this to your desired packet size
+    num_packets = (file_size + packet_size - 1) // packet_size  # ceil(file_size / packet_size)
+    
+    packets = []
+
+    # Create the header with filename and number of packets
+    header = f"{filename}:{num_packets}".encode('utf-8').ljust(50, b'\0')  # Pad header to a fixed length
+    packets.append(header)
+    
+    # Create packets
+    for i in range(num_packets):
+        start = i * packet_size
+        end = min(start + packet_size, file_size)
+        data = file_content[start:end]
         
-        splitted_data.append(last)
+        # Add padding to the last packet
+        if len(data) < packet_size:
+            data = data.ljust(packet_size, b'\0')
         
-    return splitted_data
-
-def read_files(top_secret_path):
-    files_bytes = []
-    for file in top_secret_files:
-        with open(os.path.join(TOP_SECRET_FOLDER_PATH, file), 'rb') as f:
-            data = f.read()
-            # convert each byte to an integer
-            data = [int(byte) for byte in data]
-            files_bytes.append(data)
+        # Add the header to the packet
+        packet = data
+        packets.append(packet)
     
-    return files_bytes            
+    return packets
 
-
-def decrypt_file(data:list[list[int]]) -> bytes:
-    # Decrypt the data
-    file_bytes = b''
-    decrypted_data = []
-    for i, packet in enumerate(data):
-        for j, byte in enumerate(packet):
-            if byte is None:
-                continue
-            decrypted_data.append(byte.to_bytes(1, 'big'))
+# Function to save the packets to a new file for demonstration
+def save_packets(packets, output_dir):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     
-    return b''.join(decrypted_data)
-        
-
-def main():
-    files_bytes = read_files(TOP_SECRET_FOLDER_PATH)
-    for file in files_bytes:
-        splitted_data = split_to_channels(file,1)
-        print(splitted_data)
-        decrypted_data = decrypt_file(splitted_data)
-        with open('decrypted_file.txt', 'wb') as f:
-            f.write(decrypted_data)
-        print(decrypted_data)
+    for idx, packet in enumerate(packets):
+        output_filename = os.path.join(output_dir, f"packet_{idx+1}")
+        with open(output_filename, 'wb') as output_file:
+            output_file.write(packet)
+            
+def read_packets(input_dir):
+    # List all packet files in the directory and sort them
+    packet_files = sorted(os.listdir(input_dir))
     
+    packets = []
+    for packet_file in packet_files:
+        packet_path = os.path.join(input_dir, packet_file)
+        with open(packet_path, 'rb') as file:
+            packet = file.read()
+            packets.append(packet)
+    
+    return packets
 
-if __name__ == '__main__':
-    main()
+def reconstruct_file(packets, output_filename):
+    # Initialize an empty byte array for the file content
+    file_content = bytes()
+    
+    header = packets[0].rstrip(b'\0').decode('utf-8')
+    filename, num_packets = header.split(':')
+    num_packets = int(num_packets)
+    
+    for i in range(1, num_packets+1):
+        packet = packets[i]
+        file_content += packet
+    
+    file_content = file_content.rstrip(b'\0')
+    # Write the reconstructed file content to the output file
+    with open(output_filename, 'wb') as output_file:
+        output_file.write(file_content)
+
+# Example usage
+
+# Example usage
+filename = '/Users/shalevaziz/Documents/sprint3/frame.txt'  # Replace with your filename
+packets = split_file_into_packets(filename)
+qrs = [generate_qr_code_from_file(packet) for packet in packets]
+show_qrs(qrs, 1)
+print(len(packets))
+"""save_packets(packets, 'output_packets')
+packets = read_packets('output_packets')"""
+reconstruct_file(packets, 'reconstructed_file.txt')  # Output filename for reconstructed file

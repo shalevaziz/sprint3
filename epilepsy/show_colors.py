@@ -2,8 +2,8 @@ import cv2
 import time
 import numpy as np
 LST = [0,1,2,3,2,1,3,0]
-WIDTH = 1920
-HEIGHT = 1080
+WIDTH = 3400
+HEIGHT = 2200
 def create_image(color):
     image = np.zeros((HEIGHT, WIDTH, 3), np.uint8)
     if color == 3:
