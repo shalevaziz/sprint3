@@ -6,7 +6,7 @@ import scipy.fftpack
 
 # Constants
 RATE = 44100  # Sampling rate in Hz
-CHUNK = int(RATE * 0.02)  # Size of audio chunk (20ms window)
+CHUNK = int(RATE * 0.25)  # Size of audio chunk (20ms window)
 
 def find_closest_multiple_10(frequency):
     return round(frequency / 10) * 10
