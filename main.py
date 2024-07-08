@@ -46,7 +46,8 @@ def decrypt_file(data:list[list[int]]) -> bytes:
 def main():
     files_bytes = read_files(TOP_SECRET_FOLDER_PATH)
     for file in files_bytes:
-        splitted_data = split_to_channels(file)
+        splitted_data = split_to_channels(file,1)
+        print(splitted_data)
         decrypted_data = decrypt_file(splitted_data)
         with open('decrypted_file.txt', 'wb') as f:
             f.write(decrypted_data)
